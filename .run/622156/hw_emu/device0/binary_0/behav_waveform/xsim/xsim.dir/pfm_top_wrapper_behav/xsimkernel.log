@@ -1,0 +1,7 @@
+Running: xsim.dir/pfm_top_wrapper_behav/xsimk -wdb xilinx_u250_gen3x16_xdma_4_1_202210_1-0-mmul.link.wdb -simmode gui -simrunnum 0 -socket 60129
+Design successfully loaded
+Design Loading Memory Usage: 64932 KB (Peak: 64932 KB)
+Design Loading CPU Usage: 20 ms
+Simulation completed
+Simulation Memory Usage: 232736 KB (Peak: 298260 KB)
+Simulation CPU Usage: 11330 ms
