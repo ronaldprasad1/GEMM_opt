@@ -1,0 +1,69 @@
+# Vitis HLS generated files and folders
+/solution*/          # HLS solution folders (e.g. solution1, solution2)
+/.vitis_hls.log      # Vitis HLS log file
+/.Xil/               # Xilinx intermediate build directory
+/.crashinfo/         # Crash dumps
+/.ipcache/           # IP cache
+/*.jou               # Journal files
+/*.log               # Log files
+/*.rpt               # Reports
+/*.wdb               # Waveform databases
+
+# TCL auto-generated files
+/*.tcl
+!*.manual.tcl        # Keep hand-written .tcl files if named this way
+
+# Vivado/Vitis-generated system project files
+*.runs/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.srcs/
+*.cache/
+*.webtalk/
+*.xpr
+*.xsd
+*.xml
+
+# Misc
+*.bak
+*.orig
+*.swp
+*~
+
+# Ignore output binaries or synthesized Verilog/VHDL
+/*.v
+/*.vh
+/*.sv
+/*.vhd
+/*.edf
+/*.bit
+/*.bin
+
+# Ignore testbench output
+/output/
+*.log
+*.vcd
+*.wlf
+*.csv
+
+# Ignore Python bytecode if you use scripts
+__pycache__/
+*.pyc
+
+# Ignore generated folders and files at any depth
+**/_x/
+**/_x.*
+**/.ipcache/
+**/.run/
+**/build_dir.*/
+**/logs/
+**/*.jou
+**/*.wdb
+**/*.rpt
+**/*.pb            # protobuf files
+**/*.str           # strategy files
+**/*.tmp
+**/*.tmp.*         # temp files like .tmp.bit
+**/.nfs*
+

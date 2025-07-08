@@ -1,3 +1,0 @@
-Kernel trace events
-Device, Binary, Kernel, Compute Unit, Function, Data Type, Index, Start Time (ms), End Time (ms), Value
-xilinx_u250_gen3x16_xdma_4_1_202210_1-0,mmul.link,mmul,mmul_1,top,top,0,0.518092,0.520409,0

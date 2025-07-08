@@ -9,7 +9,7 @@
 #include "experimental/xrt_kernel.h"
 #include "experimental/xrt_profile.h"
 
-#define N 100
+#define N 1000
 
 int main(int argc, char** argv) {
 
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
     }
 
     // Synchronize buffer content with device side
-    std::cout << "synchronize input buffer data to device global memory\n";
+    std::cout << "Synchronize input buffer data to device global memory\n";
 
     bo0.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo1.sync(XCL_BO_SYNC_BO_TO_DEVICE);

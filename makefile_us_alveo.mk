@@ -70,7 +70,11 @@ LDFLAGS += -luuid -lxrt_coreutil
 
 ############################## Setting up Kernel Variables ##############################
 # Kernel compiler global settings
-VPP_FLAGS += --save-temps --report_level estimate
+VPP_FLAGS += --save-temps --report_level estimate \
+             --profile.data all:all:all \
+             --profile.memory all \
+             --profile.exec all:all \
+             --profile.stall all:all
 
 
 EXECUTABLE = ./matrix_mul_xrt
