@@ -9,7 +9,7 @@
 #include "experimental/xrt_kernel.h"
 #include "experimental/xrt_profile.h"
 
-#define N 1000
+#define N 2560
 
 int main(int argc, char** argv) {
 
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     std::fill(bo_out_map, bo_out_map + (N * N), 0);
 
     // Create test data
-    int bufReference[N * N];
+    std::vector<int> bufReference(N * N);
     for (int i = 0; i < (N * N); i++) {
         bo0_map[i] = std::rand();
         bo1_map[i] = std::rand();
@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
     bo1.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
     std::cout << "Execution of the kernel\n";
-    auto run = krnl(bo0, bo1, bo_out, (N * N));
+    auto run = krnl(bo0, bo1, bo_out);
     run.wait();
 
     // Get the output;
@@ -87,8 +87,21 @@ int main(int argc, char** argv) {
     bo_out.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
 
     // Validate our results
-    if (std::memcmp(bo_out_map, bufReference, (N * N)))
+    std::cout << "Validating output...\n";
+    bool match = true;
+    for (int  i = 0; i < N * N; i++) {
+        if (bo_out_map[i] != bufReference[i]) {
+            std::cout << "Mismatch at index " << i
+                    << ": expected " << bufReference[i]
+                    << ", got " << bo_out_map[i] << "\n";
+            match = false;
+            break; // or remove break to see all mismatches
+        }
+    }
+
+    if (!match) {
         throw std::runtime_error("Value read back does not match reference");
+    }
 
     std::cout << "TEST PASSED\n";
 
