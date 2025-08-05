@@ -72,7 +72,7 @@ LDFLAGS += -luuid -lxrt_coreutil
 # Kernel compiler global settings
 VPP_FLAGS += --save-temps --report_level estimate \
              --profile.data all:all:all \
-             --profile.memory all \
+             --profile.memory DDR[1] \
              --profile.exec all:all \
              --profile.stall all:all
 
