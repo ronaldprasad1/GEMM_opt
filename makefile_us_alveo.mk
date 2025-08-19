@@ -138,7 +138,7 @@ endif
 # Cleaning stuff
 clean:
 	-$(RMDIR) $(EXECUTABLE) $(XCLBIN)/{*hw_emu*} 
-	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv 
+	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt 
 	-$(RMDIR) src/*.ll *v++* .Xil emconfig.json dltmp* xmltmp* *.log *.jou *.wcfg *.wdb
 
 cleanall: clean

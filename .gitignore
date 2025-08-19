@@ -70,3 +70,6 @@ __pycache__/
 xrt.run_summary
 matrix_mul_xrt
 xilinx_u250_gen3x16_xdma_4_1_202210_1-0-mmul.link.protoinst
+
+.Xil
+mmul_proj

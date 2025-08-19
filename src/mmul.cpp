@@ -3,6 +3,8 @@
 #include "ap_int.h"
 
 #define TILE_WIDTH 128
+#define ROW_WIDTH 16
+#define TOTAL_WORDS (TILE_WIDTH * TILE_WIDTH / ROW_WIDTH)
 
 union packed512 {
     ap_int<512> width;
@@ -13,9 +15,9 @@ union packed512 {
 
 extern "C" {
     void mmul(ap_int<512>* in1, ap_int<512>* in2, ap_int<512>* out, int N) {
-        #pragma HLS INTERFACE m_axi port = in1 bundle = gmem0
-        #pragma HLS INTERFACE m_axi port = in2 bundle = gmem1
-        #pragma HLS INTERFACE m_axi port = out bundle = gmem2
+        #pragma HLS INTERFACE m_axi port=in1 bundle=gmem0
+        #pragma HLS INTERFACE m_axi port=in2 bundle=gmem1
+        #pragma HLS INTERFACE m_axi port=out bundle=gmem2
 
         int A_tile[TILE_WIDTH][TILE_WIDTH];
         int B_tile[TILE_WIDTH][TILE_WIDTH];
@@ -35,7 +37,7 @@ extern "C" {
                 for (int ii = 0; ii < TILE_WIDTH; ++ii) {
                     #pragma HLS pipeline II=1
                     for (int jj = 0; jj < TILE_WIDTH; ++jj) {
-                        #pragma HLS unroll factor=8 
+                        #pragma HLS unroll 
                         C_tile[ii][jj] = 0;
                     }
                 }
@@ -43,48 +45,28 @@ extern "C" {
 	            loop_k:
                 for (int k = 0; k < N; k += TILE_WIDTH) {
 
-                    // load A_tile 
-
-                    // VERSION 1
-		            loop_A_ii:
+		            loop_LOAD_A_B_ii:
                     for (int ii = 0; ii < TILE_WIDTH; ++ii) {
-            		    loop_A_kk_row:
-                        for (int kk_row = 0; kk_row < TILE_WIDTH / 16; ++kk_row) {
-                            
-		                    int row = i + ii;
+                        int row_base_index_a = ((i + ii) * N + k) / ROW_WIDTH;
+                        int row_base_index_b = ((k + ii) * N + j) / ROW_WIDTH;
+                        loop_A_B_kk_row:
+                        for (int kk_row = 0; kk_row < TILE_WIDTH / ROW_WIDTH; ++kk_row) {
                             #pragma HLS pipeline II=1
-                            int col = k + kk_row * 16;
-                            int index = (row * N + col) / 16;
-                            
-                            packed512 tmp;
-                            tmp.width = in1[index];
 
-			                loop_A_unroll:
-                            for (int kk = 0; kk < 16; ++kk) {
-                                #pragma HLS unroll factor=8
-                                A_tile[ii][kk_row * 16 + kk] = tmp.row[kk];
+                            packed512 a_512, b_512;
+                            a_512.width = in1[row_base_index_a + kk_row];
+                            b_512.width = in2[row_base_index_b + kk_row];
+
+			                loop_A_B_unroll:
+                            for (int r = 0; r < ROW_WIDTH; ++r) {
+                                #pragma HLS unroll
+                                int jj = kk_row * ROW_WIDTH + r;
+                                A_tile[ii][jj] = a_512.row[r];
+                                B_tile[ii][jj] = b_512.row[r];
                             }
                         }
                     }
-		    
-                    // load B_tile
-                    for (int kk = 0; kk < TILE_WIDTH; ++kk) {
-                        for (int jj_row = 0; jj_row < TILE_WIDTH / 16; ++jj_row) {
-                            #pragma HLS pipeline II=1
-                            int row = k + kk;
-                            int col = j + jj_row * 16;
-                            int index = (row * N + col) / 16;
 
-                            packed512 tmp;
-                            tmp.width = in2[index];
-
-                            for (int jj = 0; jj < 16; ++jj) {
-                                #pragma HLS unroll factor=8
-                                B_tile[kk][jj_row * 16 + jj] = tmp.row[jj];
-                            }
-                        }
-                    }
-		    
                     // compute C_tile
                     COMPUTE_LOOP:
                     for (int ii = 0; ii < TILE_WIDTH; ++ii) {
@@ -103,28 +85,23 @@ extern "C" {
 		    
                 }
 		
-                // write to output
+                // write to output 
                 for (int ii = 0; ii < TILE_WIDTH; ++ii) {
-                    for (int jj_row = 0; jj_row < TILE_WIDTH / 16; ++jj_row) {
-                        #pragma HLS pipeline II=1
-                        packed512 tmp;
-                        int row = i + ii;
-                        int col = j + jj_row * 16;
-                        int index = row * N + col;
-                        tmp.width = out[index / 16];
-
-                        for (int jj = 0; jj < 16; ++jj) {
+                    int row_base_index = ((i + ii) * N + j) / ROW_WIDTH; 
+                    for (int jj_row = 0; jj_row < TILE_WIDTH / ROW_WIDTH; ++jj_row) { 
+                        #pragma HLS pipeline II=1 
+                        packed512 c_512; 
+                        
+                        for (int r = 0; r < ROW_WIDTH; ++r) { 
                             #pragma HLS unroll
-                            tmp.row[jj] = C_tile[ii][jj_row * 16 + jj];
-                        }
-                        out[index / 16] = tmp.width;
+                            int jj = jj_row * ROW_WIDTH + r;
+                            c_512.row[r] = C_tile[ii][jj]; 
+                        } 
+
+                        out[row_base_index + jj_row] = c_512.width; 
                     }
                 }
-		    
             }
-		    
-        }
-		    
-		//out[0] = (volatile int) 0;
+        }		    
     }
 }
