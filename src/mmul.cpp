@@ -5,6 +5,7 @@
 #define TILE_WIDTH 128
 #define ROW_WIDTH 16
 #define TOTAL_WORDS (TILE_WIDTH * TILE_WIDTH / ROW_WIDTH)
+#define WORDS_PER_ROW (TILE_WIDTH / ROW_WIDTH)
 
 union packed512 {
     ap_int<512> width;
@@ -15,68 +16,96 @@ union packed512 {
 
 extern "C" {
     void mmul(ap_int<512>* in1, ap_int<512>* in2, ap_int<512>* out, int N) {
+
         #pragma HLS INTERFACE m_axi port=in1 bundle=gmem0
         #pragma HLS INTERFACE m_axi port=in2 bundle=gmem1
         #pragma HLS INTERFACE m_axi port=out bundle=gmem2
+        #pragma HLS INTERFACE s_axilite port=N
+        #pragma HLS INTERFACE s_axilite port=return
 
         int A_tile[TILE_WIDTH][TILE_WIDTH];
         int B_tile[TILE_WIDTH][TILE_WIDTH];
         int C_tile[TILE_WIDTH][TILE_WIDTH];
+        
+        const int TOTAL_TILES = N / TILE_WIDTH;
 
-        #pragma HLS array_partition variable=A_tile type=cyclic dim=2 factor=8
-        #pragma HLS array_partition variable=B_tile type=cyclic dim=1 factor=8
-        #pragma HLS array_partition variable=C_tile type=cyclic dim=2 factor=8
+        #pragma HLS array_partition variable=A_tile type=cyclic dim=2 factor=16
+        #pragma HLS array_partition variable=B_tile type=cyclic dim=1 factor=16
+        #pragma HLS array_partition variable=C_tile type=cyclic dim=2 factor=16
 
 
-        loop_i: 
-        for (int i = 0; i < N; i += TILE_WIDTH) {
-         	loop_j: 
-            for (int j = 0; j < N; j += TILE_WIDTH){      
+        loop_i: for (int t_i = 0; t_i < TOTAL_TILES; ++t_i) {
+         	loop_j: for (int t_j = 0; t_j < TOTAL_TILES; ++t_j){      
+
                 // iterate through the tiles
                 // reset C tile
-                for (int ii = 0; ii < TILE_WIDTH; ++ii) {
+                RESET_C_ii: for (int ii = 0; ii < TILE_WIDTH; ++ii) {
                     #pragma HLS pipeline II=1
-                    for (int jj = 0; jj < TILE_WIDTH; ++jj) {
+                    RESET_C_UNROLL_jj: for (int jj = 0; jj < TILE_WIDTH; ++jj) {
                         #pragma HLS unroll 
                         C_tile[ii][jj] = 0;
                     }
                 }
 
-	            loop_k:
-                for (int k = 0; k < N; k += TILE_WIDTH) {
+	            loop_k: for (int t_k = 0; t_k < TOTAL_TILES; ++t_k) {
 
-		            loop_LOAD_A_B_ii:
-                    for (int ii = 0; ii < TILE_WIDTH; ++ii) {
-                        int row_base_index_a = ((i + ii) * N + k) / ROW_WIDTH;
-                        int row_base_index_b = ((k + ii) * N + j) / ROW_WIDTH;
-                        loop_A_B_kk_row:
-                        for (int kk_row = 0; kk_row < TILE_WIDTH / ROW_WIDTH; ++kk_row) {
-                            #pragma HLS pipeline II=1
+                    ap_int<512>* a_base = in1 + ((t_i * TOTAL_TILES + t_k) * TOTAL_WORDS); 
+                    
+                    int a_ii = 0;
+                    int a_w = 0;
+                    load_a_outer: for (int t = 0; t < TOTAL_WORDS; ++t) {
+                        #pragma HLS pipeline II=1
+                        
+                        packed512 tmp;
+                        tmp.width = a_base[t];
+                        
+                        
+                        int base = a_w * ROW_WIDTH;
+                        unpack_a: for (int r = 0; r < ROW_WIDTH; ++r) {
+                            #pragma HLS unroll
+                            int jj = base + r;
+                            A_tile[a_ii][jj] = tmp.row[r];
+                        }
+                        
+                        a_w++;
+                        if (a_w == WORDS_PER_ROW) {
+                            a_w = 0;
+                            a_ii++;
+                        }
+                    }
 
-                            packed512 a_512, b_512;
-                            a_512.width = in1[row_base_index_a + kk_row];
-                            b_512.width = in2[row_base_index_b + kk_row];
+                    ap_int<512>* b_base = in2 + ((t_k * TOTAL_TILES + t_j) * TOTAL_WORDS);
+                    
+                    int b_ii = 0;
+                    int b_w = 0;
+                    load_b_outer: for (int t = 0; t < TOTAL_WORDS; ++t) {
+                        #pragma HLS pipeline II=1
+                       
+                        packed512 tmp;
+                        tmp.width = b_base[t];
 
-			                loop_A_B_unroll:
-                            for (int r = 0; r < ROW_WIDTH; ++r) {
-                                #pragma HLS unroll
-                                int jj = kk_row * ROW_WIDTH + r;
-                                A_tile[ii][jj] = a_512.row[r];
-                                B_tile[ii][jj] = b_512.row[r];
-                            }
+                        
+                        int base = b_w * ROW_WIDTH;
+                        unpack_b: for (int r = 0; r < ROW_WIDTH; ++r) {
+                            #pragma HLS unroll
+                            int jj = base + r;
+                            B_tile[b_ii][jj] = tmp.row[r];
+                        }
+
+                        b_w++;
+                        if (b_w == WORDS_PER_ROW) {
+                            b_w = 0;
+                            b_ii++;
                         }
                     }
 
                     // compute C_tile
-                    COMPUTE_LOOP:
-                    for (int ii = 0; ii < TILE_WIDTH; ++ii) {
-		                compute_loop_inner: 
-		                for (int jj = 0; jj < TILE_WIDTH; ++jj) {
+                    COMPUTE_LOOP: for (int ii = 0; ii < TILE_WIDTH; ++ii) {
+                        compute_loop_inner: for (int jj = 0; jj < TILE_WIDTH; ++jj) {
                             #pragma HLS pipeline II=1
                             int sum = 0;
-		                    compute_loop_innermost:
-                            for (int kk = 0; kk < TILE_WIDTH; ++kk) {
-                                #pragma HLS unroll
+                            compute_loop_innermost: for (int kk = 0; kk < TILE_WIDTH; ++kk) {
+                                #pragma HLS unroll;
                                 sum += A_tile[ii][kk] * B_tile[kk][jj];
                             }
                             C_tile[ii][jj] += sum;
@@ -85,23 +114,31 @@ extern "C" {
 		    
                 }
 		
-                // write to output 
-                for (int ii = 0; ii < TILE_WIDTH; ++ii) {
-                    int row_base_index = ((i + ii) * N + j) / ROW_WIDTH; 
-                    for (int jj_row = 0; jj_row < TILE_WIDTH / ROW_WIDTH; ++jj_row) { 
-                        #pragma HLS pipeline II=1 
-                        packed512 c_512; 
-                        
-                        for (int r = 0; r < ROW_WIDTH; ++r) { 
-                            #pragma HLS unroll
-                            int jj = jj_row * ROW_WIDTH + r;
-                            c_512.row[r] = C_tile[ii][jj]; 
-                        } 
+                // write to output
+                ap_int<512>* c_base = out + ((t_i * TOTAL_TILES + t_j) * TOTAL_WORDS);
 
-                        out[row_base_index + jj_row] = c_512.width; 
+                int c_ii = 0;
+                int c_w = 0;
+                store_c_outer: for (int t = 0; t < TOTAL_WORDS; ++t) {
+                    #pragma HLS pipeline II=1
+                    
+                    packed512 tmp;
+                    
+                    int base = c_w * ROW_WIDTH;
+                    unpack_c: for (int r = 0; r < ROW_WIDTH; ++r) {
+                        #pragma HLS unroll
+                        int jj = base + r;
+                        tmp.row[r] = C_tile[c_ii][jj];
                     }
+
+                    c_w++;
+                    if (c_w == WORDS_PER_ROW) {
+                        c_w = 0;
+                        c_ii++;
+                    }
+                    c_base[t] = tmp.width;
                 }
-            }
+           }
         }		    
     }
 }

@@ -70,9 +70,9 @@ LDFLAGS += -luuid -lxrt_coreutil
 
 ############################## Setting up Kernel Variables ##############################
 # Kernel compiler global settings
-VPP_FLAGS += --save-temps --report_level estimate \
+VPP_FLAGS += --save-temps --report_level 2 \
              --profile.data all:all:all \
-             --profile.memory DDR[1] \
+             --profile.memory all \
              --profile.exec all:all \
              --profile.stall all:all
 
@@ -100,7 +100,7 @@ $(TEMP_DIR)/mmul.xo: src/mmul.cpp
 
 $(BUILD_DIR)/mmul.xclbin: $(TEMP_DIR)/mmul.xo
 	mkdir -p $(BUILD_DIR)
-	v++ -l $(VPP_FLAGS) $(VPP_LDFLAGS) -t $(TARGET) --platform $(PLATFORM) --temp_dir $(TEMP_DIR) -o'$(LINK_OUTPUT)' $(+)
+	v++ -l $(VPP_FLAGS) $(VPP_LDFLAGS) -t $(TARGET) --platform $(PLATFORM) --temp_dir $(TEMP_DIR) --config connectivity.cfg -o'$(LINK_OUTPUT)' $(+)
 	v++ -p $(LINK_OUTPUT) $(VPP_FLAGS) -t $(TARGET) --platform $(PLATFORM) --package.out_dir $(PACKAGE_OUT) -o $(BUILD_DIR)/mmul.xclbin
 
 ############################## Setting Rules for Host (Building Host Executable) ##############################
