@@ -1,3 +1,3 @@
 # GEMM_opt
 
-This is an HLS kernel to implement GEMM and then optimize
+This is an HLS kernel that implements GEMM. The goal of this kernel is to build a solid foundation of HLS.
