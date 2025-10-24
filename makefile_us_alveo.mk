@@ -60,9 +60,9 @@ LDFLAGS += -L$(XILINX_XRT)/lib -pthread -lOpenCL
 PLATFORM_BLOCKLIST += nodma 
 ############################## Setting up Host Variables ##############################
 #Include Required Host Source Files
-CXXFLAGS += -I$(HOME)/Documents/GEMM_opt/common/includes/cmdparser
-CXXFLAGS += -I$(HOME)/Documents/GEMM_opt/common/includes/logger
-HOST_SRCS += $(HOME)/Documents/GEMM_opt/common/includes/cmdparser/cmdlineparser.cpp $(HOME)/Documents/GEMM_opt/common/includes/logger/logger.cpp ./src/host.cpp 
+CXXFLAGS += -I$(CURDIR)/common/includes/cmdparser
+CXXFLAGS += -I$(CURDIR)/common/includes/logger
+HOST_SRCS += $(CURDIR)/common/includes/cmdparser/cmdlineparser.cpp $(CURDIR)/common/includes/logger/logger.cpp ./src/host.cpp 
 # Host compiler global settings
 CXXFLAGS += -fmessage-length=0
 LDFLAGS += -lrt -lstdc++ 
